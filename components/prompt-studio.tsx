@@ -202,9 +202,6 @@ export function PromptStudio() {
   }
 
   async function deletePrompt(prompt: PromptItem) {
-    const confirmed = window.confirm(`Delete prompt "${prompt.title}"?`);
-    if (!confirmed) return;
-
     try {
       await deletePromptApi(prompt.id);
     } catch (error) {

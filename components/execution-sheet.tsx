@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Clipboard,
@@ -11,9 +10,11 @@ import {
   X,
   ZoomIn,
 } from "lucide-react";
+import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -64,6 +65,7 @@ export function ExecutionSheet({
   onDeletePrompt,
 }: ExecutionSheetProps) {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
     <>
@@ -92,15 +94,23 @@ export function ExecutionSheet({
                   </div>
                   <SheetTitle>{prompt.title}</SheetTitle>
                   <SheetDescription>
-                    Fill the generated form from your manual variables, then copy
-                    the final prompt with substitutions.
+                    Fill the generated form from your manual variables, then
+                    copy the final prompt with substitutions.
                   </SheetDescription>
                   <div className="flex items-center gap-2 pt-1">
                     <Button size="sm" variant="ghost" onClick={onEditPrompt}>
                       <Pencil className="h-4 w-4" />
                       Edit
                     </Button>
-                    <Button size="sm" variant="ghost" onClick={onDeletePrompt}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-zinc-400 hover:text-red-400 hover:bg-red-500/10"
+                      onClick={() => {
+                        setShowDeleteConfirm(true);
+                        onOpenChange(false); // Close the Sheet
+                      }}
+                    >
                       <Trash2 className="h-4 w-4" />
                       Delete
                     </Button>
@@ -225,8 +235,8 @@ export function ExecutionSheet({
                     </div>
                     <p className="text-xs text-zinc-500">
                       Upload your generated result to Supabase Storage. If
-                      Supabase is not configured, a local preview is attached for
-                      this session.
+                      Supabase is not configured, a local preview is attached
+                      for this session.
                     </p>
                     <Input
                       type="file"
@@ -243,7 +253,10 @@ export function ExecutionSheet({
                     {prompt.outputImageUrl ? (
                       <div
                         className="group/image relative cursor-pointer overflow-hidden rounded-xl border border-zinc-800"
-                        onClick={() => setIsImageModalOpen(true)}
+                        onClick={() => {
+                          onOpenChange(false);
+                          setIsImageModalOpen(true);
+                        }}
                       >
                         <img
                           src={prompt.outputImageUrl}
@@ -264,6 +277,24 @@ export function ExecutionSheet({
           </AnimatePresence>
         </SheetContent>
       </Sheet>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Delete Prompt"
+        description={
+          prompt
+            ? `Are you sure you want to delete "${prompt.title}"? This action cannot be undone and will permanently remove this prompt and all associated data.`
+            : "Are you sure you want to delete this prompt?"
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={() => {
+          onDeletePrompt(); // Execute delete
+        }}
+      />
 
       {/* Image Zoom Modal - Rendered outside Sheet to avoid overflow constraints */}
       <AnimatePresence>

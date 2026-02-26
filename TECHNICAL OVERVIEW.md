@@ -217,14 +217,13 @@ Files stored at path: `{promptId}/{timestamp}-{sanitizedFilename}`
 
 ## 8. Environment Variables
 
-| Variable                              | Required | Scope           | Description                                      |
-| ------------------------------------- | -------- | --------------- | ------------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`            | Yes      | Client + Server | Supabase project URL                             |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`       | Yes      | Client + Server | Supabase anon/public key                         |
-| `SUPABASE_SERVICE_ROLE_KEY`           | Yes      | Server only     | Supabase service role key (bypasses RLS)         |
-| `SUPABASE_PROMPT_OWNER_USER_ID`       | Yes      | Server only     | UUID of the single prompt owner                  |
-| `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET` | No       | Client + Server | Storage bucket name (default: `prompt-results`)  |
-| `NEXT_ALLOWED_DEV_ORIGINS`            | No       | Server only     | Comma-separated extra origins for dev LAN access |
+| Variable                        | Required | Scope           | Description                                      |
+| ------------------------------- | -------- | --------------- | ------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Client + Server | Supabase project URL                             |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Client + Server | Supabase anon/public key                         |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Yes      | Server only     | Supabase service role key (bypasses RLS)         |
+| `SUPABASE_PROMPT_OWNER_USER_ID` | Yes      | Server only     | UUID of the single prompt owner                  |
+| `NEXT_ALLOWED_DEV_ORIGINS`      | No       | Server only     | Comma-separated extra origins for dev LAN access |
 
 ---
 

@@ -39,7 +39,6 @@ SUPABASE_PROMPT_OWNER_USER_ID=<uuid-of-prompt-owner>
 Optional:
 
 ```
-NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET=prompt-results     # default
 NEXT_ALLOWED_DEV_ORIGINS=http://192.168.1.10:3000      # LAN dev access
 ```
 

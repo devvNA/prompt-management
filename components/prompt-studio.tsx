@@ -460,14 +460,6 @@ export function PromptStudio() {
                     </div>
                   </div>
                 </div>
-
-                <div className="rounded-2xl border border-zinc-800/70 bg-zinc-900/50 p-4 text-xs text-zinc-400">
-                  Supabase Storage bucket:
-                  <code className="ml-2 rounded bg-zinc-800 px-1 py-0.5 text-zinc-200">
-                    {process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET ||
-                      "prompt-results"}
-                  </code>
-                </div>
               </CardContent>
             </Card>
           </aside>

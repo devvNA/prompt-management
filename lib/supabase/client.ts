@@ -18,7 +18,7 @@ export function getSupabaseBrowserClient() {
 
 export async function uploadPromptResultImage(file: File, promptId: string) {
   const supabase = getSupabaseBrowserClient();
-  const bucket = process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "prompt-results";
+  const bucket = "prompt-results";
 
   if (!supabase) {
     throw new Error("Supabase environment variables are not configured.");

@@ -15,7 +15,6 @@ High-end personal prompt management web app with:
 3. Set:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - Optional `NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET` (defaults to `prompt-results`)
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SUPABASE_PROMPT_OWNER_USER_ID` (UUID user owner untuk CRUD prompt tanpa UI auth)
 4. Create a Supabase Storage bucket (public or policy-configured) named `prompt-results`

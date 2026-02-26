@@ -56,5 +56,5 @@ export function getPromptOwnerUserId() {
 }
 
 export function getPromptResultsBucket() {
-  return process.env.NEXT_PUBLIC_SUPABASE_STORAGE_BUCKET || "prompt-results";
+  return "prompt-results";
 }

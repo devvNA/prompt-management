@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     description: siteDescription,
     images: [
       {
-        url: "/og-image.jpeg",
+        url: `${siteUrl}/og-image.jpeg`,
         width: 1200,
         height: 630,
         alt: siteTitle,
@@ -74,11 +74,15 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: siteTitle,
     description: siteDescription,
-    images: ["/og-image.jpeg"],
+    images: [`${siteUrl}/og-image.jpeg`],
   },
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/apple-icon", type: "image/png" }],
+    icon: [
+      { url: "/icon", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [
+      { url: "/apple-icon", type: "image/png", sizes: "180x180" },
+    ],
   },
 };
 

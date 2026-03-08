@@ -60,14 +60,14 @@ export function PromptCard({
             onOpen();
           }
         }}
-        className="group overflow-hidden border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 transition hover:-translate-y-0.5 hover:border-indigo-500/30"
+        className="group overflow-hidden border-zinc-800/80 bg-gradient-to-b from-zinc-900/90 to-zinc-950/90 transition-colors hover:border-indigo-500/30"
       >
         {showCoverImage && (
           <div className="relative h-44 overflow-hidden border-b border-zinc-800">
             <img
               src={normalizedOutputImageUrl}
               alt={`${prompt.title} cover`}
-              className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+              className="h-full w-full object-cover"
               onError={() => setImageLoadFailed(true)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent" />

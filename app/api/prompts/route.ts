@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { buildApiErrorMessage } from "@/lib/api-error";
-import type { PromptItem, PromptVariableType } from "@/lib/types";
 import { getPromptOwnerUserId, getSupabaseAdminClient } from "@/lib/supabase/server";
+import type { PromptItem, PromptVariableType } from "@/lib/types";
 
 type DbPromptVariableRow = {
   id: string;
@@ -111,23 +111,40 @@ async function fetchPromptById(promptId: string) {
   return toPromptItem(data as unknown as DbPromptRow);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabase = getSupabaseAdminClient();
     const ownerUserId = getPromptOwnerUserId();
 
-    const { data, error } = await supabase
+    const { searchParams } = new URL(request.url);
+    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "12", 10) || 12, 1), 100);
+    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10) || 0, 0);
+
+    const selectFields =
+      "id,title,model,category,tags,content,output_image_url,created_at,prompt_variables(id,key,label,type,dropdown_options,sort_order)";
+
+    // Try with display_order first; fall back if column doesn't exist
+    let result = await supabase
       .from("prompts")
-      .select(
-        "id,title,model,category,tags,content,output_image_url,created_at,prompt_variables(id,key,label,type,dropdown_options,sort_order)"
-      )
+      .select(selectFields, { count: "exact" })
       .eq("user_id", ownerUserId)
-      .order("created_at", { ascending: false });
+      .order("display_order", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    if (error) throw error;
+    if (result.error?.code === "42703") {
+      result = await supabase
+        .from("prompts")
+        .select(selectFields, { count: "exact" })
+        .eq("user_id", ownerUserId)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit - 1);
+    }
 
-    const prompts = ((data ?? []) as unknown as DbPromptRow[]).map(toPromptItem);
-    return NextResponse.json({ prompts });
+    if (result.error) throw result.error;
+
+    const prompts = ((result.data ?? []) as unknown as DbPromptRow[]).map(toPromptItem);
+    return NextResponse.json({ prompts, total: result.count ?? prompts.length });
   } catch (error) {
     const message = buildApiErrorMessage(error, "Failed to load prompts");
     return NextResponse.json({ error: message }, { status: 500 });

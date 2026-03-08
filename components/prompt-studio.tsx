@@ -1,6 +1,23 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  DndContext,
+  DragOverlay,
+  MouseSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import {
   Check,
   ChevronDown,
@@ -11,7 +28,14 @@ import {
   Sparkles,
   Tags,
 } from "lucide-react";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   AddPromptSheet,
@@ -33,6 +57,7 @@ import {
   createPromptApi,
   deletePromptApi,
   fetchPromptsApi,
+  reorderPromptsApi,
   updatePromptApi,
   uploadPromptResultImageApi,
 } from "@/lib/prompt-api";
@@ -42,6 +67,49 @@ import {
   replacePromptVariables,
 } from "@/lib/prompt-utils";
 import type { PromptItem, PromptVariable } from "@/lib/types";
+
+function SortablePromptCard({
+  prompt,
+  isDragDisabled,
+  onOpen,
+  onQuickCopy,
+  onEdit,
+  onDelete,
+}: {
+  prompt: PromptItem;
+  isDragDisabled: boolean;
+  onOpen: () => void;
+  onQuickCopy: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: prompt.id, disabled: isDragDisabled });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <PromptCard
+        prompt={prompt}
+        onOpen={onOpen}
+        onQuickCopy={onQuickCopy}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
+    </div>
+  );
+}
 
 const FILTER_SELECT_CLASSNAME =
   "h-11 w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-900/80 px-3 pr-10 text-sm text-zinc-50 shadow-inner shadow-black/10 outline-none transition-colors hover:border-zinc-700 focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50";
@@ -80,6 +148,11 @@ export function PromptStudio() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const selectedPrompt =
     prompts.find((item) => item.id === selectedPromptId) ?? null;
@@ -112,8 +185,10 @@ export function PromptStudio() {
     setLoadError(null);
 
     try {
-      const nextPrompts = await fetchPromptsApi();
+      const { prompts: nextPrompts, total } = await fetchPromptsApi(0);
       setPrompts(nextPrompts);
+      setTotalCount(total);
+      setHasMore(nextPrompts.length < total);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to load prompts";
@@ -122,6 +197,39 @@ export function PromptStudio() {
       setIsLoadingPrompts(false);
     }
   }
+
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore || !hasMore) return;
+    setIsLoadingMore(true);
+    try {
+      const { prompts: nextBatch, total } = await fetchPromptsApi(
+        prompts.length,
+      );
+      setPrompts((prev) => [...prev, ...nextBatch]);
+      setTotalCount(total);
+      setHasMore(prompts.length + nextBatch.length < total);
+    } catch {
+      // Silently fail — user can scroll again to retry
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, hasMore, prompts.length]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          void loadMore();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   const categories = useMemo(
     () => [
@@ -154,6 +262,41 @@ export function PromptStudio() {
 
     return matchesSearch && matchesCategory && matchesModel;
   });
+
+  const isFiltersActive =
+    search.trim().length > 0 ||
+    categoryFilter !== "All" ||
+    modelFilter !== "All";
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 300, tolerance: 5 },
+    }),
+  );
+
+  const activePrompt = activeId
+    ? (prompts.find((p) => p.id === activeId) ?? null)
+    : null;
+
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveId(null);
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setPrompts((prev) => {
+      const oldIndex = prev.findIndex((p) => p.id === active.id);
+      const newIndex = prev.findIndex((p) => p.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const newOrder = arrayMove(prev, oldIndex, newIndex);
+      void reorderPromptsApi(newOrder.map((p) => p.id));
+      return newOrder;
+    });
+  }
 
   const finalPromptPreview = selectedPrompt
     ? replacePromptVariables(selectedPrompt.content, executionValues)
@@ -355,14 +498,8 @@ export function PromptStudio() {
 
   return (
     <div className="min-h-screen px-4 py-6 md:px-6 lg:px-8">
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="mx-auto max-w-[1600px]"
-      >
-        <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-2xl backdrop-blur-sm lg:flex-row lg:items-center lg:justify-between">
+      <div className="mx-auto max-w-[1600px]">
+        <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-zinc-800/70 bg-zinc-900/70 p-5 shadow-2xl lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-200">
               <Sparkles className="h-3.5 w-3.5" />
@@ -446,7 +583,7 @@ export function PromptStudio() {
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
                       <div className="text-zinc-400">Prompts</div>
                       <div className="text-lg font-semibold text-zinc-100">
-                        {isLoadingPrompts ? "..." : prompts.length}
+                        {isLoadingPrompts ? "..." : totalCount}
                       </div>
                     </div>
                     <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
@@ -462,7 +599,7 @@ export function PromptStudio() {
           </aside>
 
           <section className="space-y-4">
-            <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4 backdrop-blur-sm md:flex-row md:items-center">
+            <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4 md:flex-row md:items-center">
               <div className="relative flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
                 <Input
@@ -478,20 +615,22 @@ export function PromptStudio() {
               </div>
             </div>
 
-            <AnimatePresence mode="popLayout">
-              <motion.div layout className="masonry-grid">
-                {filteredPrompts.map((prompt, index) => (
-                  <motion.div
-                    layout
-                    key={prompt.id}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98 }}
-                    transition={{ duration: 0.22, delay: index * 0.02 }}
-                    className="masonry-item"
-                  >
-                    <PromptCard
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredPrompts.map((p) => p.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="prompt-grid">
+                  {filteredPrompts.map((prompt) => (
+                    <SortablePromptCard
+                      key={prompt.id}
                       prompt={prompt}
+                      isDragDisabled={isFiltersActive}
                       onOpen={() => openExecutionSheet(prompt)}
                       onQuickCopy={() =>
                         void copyToClipboard(prompt.content, "Raw prompt")
@@ -499,10 +638,35 @@ export function PromptStudio() {
                       onEdit={() => openEditPromptSheet(prompt)}
                       onDelete={() => void deletePrompt(prompt)}
                     />
-                  </motion.div>
-                ))}
-              </motion.div>
-            </AnimatePresence>
+                  ))}
+                </div>
+              </SortableContext>
+              <DragOverlay dropAnimation={null}>
+                {activePrompt ? (
+                  <div className="max-w-sm rotate-[2deg] scale-[1.02] cursor-grabbing shadow-2xl shadow-indigo-500/20">
+                    <PromptCard
+                      prompt={activePrompt}
+                      onOpen={() => {}}
+                      onQuickCopy={() => {}}
+                      onEdit={() => {}}
+                      onDelete={() => {}}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+
+            {/* Infinite scroll sentinel */}
+            {hasMore && !loadError && !isLoadingPrompts ? (
+              <div ref={sentinelRef} className="flex justify-center py-6">
+                {isLoadingMore ? (
+                  <div className="flex items-center gap-2 text-sm text-zinc-400">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-400" />
+                    Loading more...
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
 
             {loadError ? (
               <Card className="border-red-900/60 bg-red-950/20">
@@ -524,9 +688,7 @@ export function PromptStudio() {
             {!loadError && isLoadingPrompts ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
-                  <p className="text-zinc-300">
-                    Loading prompts from Supabase...
-                  </p>
+                  <p className="text-zinc-300">Loading...</p>
                 </CardContent>
               </Card>
             ) : null}
@@ -549,7 +711,7 @@ export function PromptStudio() {
             ) : null}
           </section>
         </div>
-      </motion.div>
+      </div>
 
       <ExecutionSheet
         open={execSheetOpen}
@@ -594,19 +756,12 @@ export function PromptStudio() {
         isSavingPrompt={isSavingPrompt}
       />
 
-      <AnimatePresence>
-        {flashMessage ? (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/95 px-4 py-3 text-sm text-zinc-100 shadow-xl"
-          >
-            <Check className="h-4 w-4 text-indigo-300" />
-            {flashMessage}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {flashMessage ? (
+        <div className="fixed bottom-4 right-4 z-[60] flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/95 px-4 py-3 text-sm text-zinc-100 shadow-xl animate-toast-in">
+          <Check className="h-4 w-4 text-indigo-300" />
+          {flashMessage}
+        </div>
+      ) : null}
     </div>
   );
 }

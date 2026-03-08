@@ -87,7 +87,7 @@ export function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[200] bg-black/80"
             onClick={() => onOpenChange(false)}
           />
 
@@ -108,6 +108,7 @@ export function ConfirmDialog({
               <div className="relative bg-gradient-to-b from-zinc-800/50 to-zinc-900/50 px-6 py-5">
                 <button
                   onClick={() => onOpenChange(false)}
+                  aria-label="Close dialog"
                   className="absolute right-4 top-4 rounded-full p-1 text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-300"
                 >
                   <X className="h-4 w-4" />

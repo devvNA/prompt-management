@@ -26,10 +26,18 @@ async function parseJsonOrThrow(response: Response) {
   return data;
 }
 
-export async function fetchPromptsApi() {
-  const response = await fetch("/api/prompts", { cache: "no-store" });
-  const data = (await parseJsonOrThrow(response)) as { prompts: PromptItem[] };
-  return data.prompts;
+const PAGE_SIZE = 12;
+
+export async function fetchPromptsApi(offset = 0, limit = PAGE_SIZE) {
+  const response = await fetch(
+    `/api/prompts?limit=${limit}&offset=${offset}`,
+    { cache: "no-store" },
+  );
+  const data = (await parseJsonOrThrow(response)) as {
+    prompts: PromptItem[];
+    total: number;
+  };
+  return data;
 }
 
 export async function createPromptApi(payload: PromptUpsertInput) {
@@ -54,6 +62,15 @@ export async function updatePromptApi(promptId: string, payload: PromptUpsertInp
 
 export async function deletePromptApi(promptId: string) {
   const response = await fetch(`/api/prompts/${promptId}`, { method: "DELETE" });
+  await parseJsonOrThrow(response);
+}
+
+export async function reorderPromptsApi(orderedIds: string[]) {
+  const response = await fetch("/api/prompts/reorder", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ orderedIds }),
+  });
   await parseJsonOrThrow(response);
 }
 

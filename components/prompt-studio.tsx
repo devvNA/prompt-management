@@ -20,13 +20,10 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Check,
-  ChevronDown,
-  Filter,
-  LayoutGrid,
   Plus,
   Search,
   Sparkles,
-  Tags,
+  Tags
 } from "lucide-react";
 import {
   useDeferredValue,
@@ -44,13 +41,9 @@ import { PromptCard } from "@/components/prompt-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  CardContent
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   createPromptApi,
   deletePromptApi,
@@ -357,8 +350,8 @@ export function PromptStudio() {
           options:
             variable.type === "dropdown"
               ? (variable.options ?? [])
-                  .map((option) => option.trim())
-                  .filter(Boolean)
+                .map((option) => option.trim())
+                .filter(Boolean)
               : undefined,
         };
       })
@@ -484,83 +477,7 @@ export function PromptStudio() {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
-          <aside className="space-y-4">
-            <Card className="sticky top-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4 text-indigo-300" />
-                  Filters
-                </CardTitle>
-                <CardDescription>
-                  Category and model filters for your prompt library.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="category-filter">Category</Label>
-                  <div className="relative">
-                    <select
-                      id="category-filter"
-                      value={categoryFilter}
-                      onChange={(event) =>
-                        setCategoryFilter(event.target.value)
-                      }
-                      className={FILTER_SELECT_CLASSNAME}
-                    >
-                      {categories.map((category) => (
-                        <option key={category} value={category}>
-                          {category}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="model-filter">Model</Label>
-                  <div className="relative">
-                    <select
-                      id="model-filter"
-                      value={modelFilter}
-                      onChange={(event) => setModelFilter(event.target.value)}
-                      className={FILTER_SELECT_CLASSNAME}
-                    >
-                      {models.map((model) => (
-                        <option key={model} value={model}>
-                          {model}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-4">
-                  <div className="mb-2 flex items-center gap-2 text-sm text-zinc-300">
-                    <LayoutGrid className="h-4 w-4" />
-                    Library Stats
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
-                      <div className="text-zinc-400">Prompts</div>
-                      <div className="text-lg font-semibold text-zinc-100">
-                        {isLoadingPrompts ? "..." : totalCount}
-                      </div>
-                    </div>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3">
-                      <div className="text-zinc-400">Visible</div>
-                      <div className="text-lg font-semibold text-indigo-200">
-                        {isLoadingPrompts ? "..." : filteredPrompts.length}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </aside>
-
+        <div className="grid gap-4 lg:grid]">
           <section className="space-y-4">
             <div className="flex flex-col gap-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/60 p-4 md:flex-row md:items-center">
               <div className="relative flex-1">
@@ -609,10 +526,10 @@ export function PromptStudio() {
                   <div className="max-w-sm rotate-[2deg] scale-[1.02] cursor-grabbing shadow-2xl shadow-indigo-500/20">
                     <PromptCard
                       prompt={activePrompt}
-                      onOpen={() => {}}
-                      onQuickCopy={() => {}}
-                      onEdit={() => {}}
-                      onDelete={() => {}}
+                      onOpen={() => { }}
+                      onQuickCopy={() => { }}
+                      onEdit={() => { }}
+                      onDelete={() => { }}
                     />
                   </div>
                 ) : null}

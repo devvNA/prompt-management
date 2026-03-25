@@ -117,28 +117,43 @@ export async function GET(request: Request) {
     const ownerUserId = getPromptOwnerUserId();
 
     const { searchParams } = new URL(request.url);
-    const limit = Math.min(Math.max(parseInt(searchParams.get("limit") || "12", 10) || 12, 1), 100);
-    const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10) || 0, 0);
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+    const limit =
+      limitParam === null
+        ? null
+        : Math.min(Math.max(parseInt(limitParam, 10) || 12, 1), 100);
+    const offset = offsetParam === null ? 0 : Math.max(parseInt(offsetParam, 10) || 0, 0);
 
     const selectFields =
       "id,title,model,category,tags,content,output_image_url,created_at,prompt_variables(id,key,label,type,dropdown_options,sort_order)";
 
     // Try with display_order first; fall back if column doesn't exist
-    let result = await supabase
+    let query = supabase
       .from("prompts")
       .select(selectFields, { count: "exact" })
       .eq("user_id", ownerUserId)
       .order("display_order", { ascending: true, nullsFirst: true })
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order("created_at", { ascending: false });
+
+    if (limit !== null) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
+    let result = await query;
 
     if (result.error?.code === "42703") {
-      result = await supabase
+      let fallbackQuery = supabase
         .from("prompts")
         .select(selectFields, { count: "exact" })
         .eq("user_id", ownerUserId)
-        .order("created_at", { ascending: false })
-        .range(offset, offset + limit - 1);
+        .order("created_at", { ascending: false });
+
+      if (limit !== null) {
+        fallbackQuery = fallbackQuery.range(offset, offset + limit - 1);
+      }
+
+      result = await fallbackQuery;
     }
 
     if (result.error) throw result.error;

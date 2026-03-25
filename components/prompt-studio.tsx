@@ -29,11 +29,9 @@ import {
   Tags,
 } from "lucide-react";
 import {
-  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -148,11 +146,8 @@ export function PromptStudio() {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isSavingPrompt, setIsSavingPrompt] = useState(false);
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMore, setHasMore] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const selectedPrompt =
     prompts.find((item) => item.id === selectedPromptId) ?? null;
@@ -185,10 +180,9 @@ export function PromptStudio() {
     setLoadError(null);
 
     try {
-      const { prompts: nextPrompts, total } = await fetchPromptsApi(0);
+      const { prompts: nextPrompts, total } = await fetchPromptsApi();
       setPrompts(nextPrompts);
       setTotalCount(total);
-      setHasMore(nextPrompts.length < total);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to load prompts";
@@ -197,39 +191,6 @@ export function PromptStudio() {
       setIsLoadingPrompts(false);
     }
   }
-
-  const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    try {
-      const { prompts: nextBatch, total } = await fetchPromptsApi(
-        prompts.length,
-      );
-      setPrompts((prev) => [...prev, ...nextBatch]);
-      setTotalCount(total);
-      setHasMore(prompts.length + nextBatch.length < total);
-    } catch {
-      // Silently fail — user can scroll again to retry
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [isLoadingMore, hasMore, prompts.length]);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          void loadMore();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [loadMore]);
 
   const categories = useMemo(
     () => [
@@ -355,6 +316,7 @@ export function PromptStudio() {
     }
 
     setPrompts((prev) => prev.filter((item) => item.id !== prompt.id));
+    setTotalCount((prev) => Math.max(prev - 1, 0));
     if (selectedPromptId === prompt.id) {
       setExecSheetOpen(false);
       setSelectedPromptId(null);
@@ -446,6 +408,7 @@ export function PromptStudio() {
         );
       } else {
         setPrompts((prev) => [savedPrompt, ...prev]);
+        setTotalCount((prev) => prev + 1);
       }
 
       if (uploadFailedMessage) {
@@ -655,18 +618,6 @@ export function PromptStudio() {
                 ) : null}
               </DragOverlay>
             </DndContext>
-
-            {/* Infinite scroll sentinel */}
-            {hasMore && !loadError && !isLoadingPrompts ? (
-              <div ref={sentinelRef} className="flex justify-center py-6">
-                {isLoadingMore ? (
-                  <div className="flex items-center gap-2 text-sm text-zinc-400">
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-400" />
-                    Loading more...
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
 
             {loadError ? (
               <Card className="border-red-900/60 bg-red-950/20">

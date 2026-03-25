@@ -26,13 +26,8 @@ async function parseJsonOrThrow(response: Response) {
   return data;
 }
 
-const PAGE_SIZE = 12;
-
-export async function fetchPromptsApi(offset = 0, limit = PAGE_SIZE) {
-  const response = await fetch(
-    `/api/prompts?limit=${limit}&offset=${offset}`,
-    { cache: "no-store" },
-  );
+export async function fetchPromptsApi() {
+  const response = await fetch("/api/prompts", { cache: "no-store" });
   const data = (await parseJsonOrThrow(response)) as {
     prompts: PromptItem[];
     total: number;
